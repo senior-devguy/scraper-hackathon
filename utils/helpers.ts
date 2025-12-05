@@ -30,6 +30,19 @@ export function generateId(input: string, prefix?: string): string {
 	return prefix ? `${prefix.split(' ').join('_')}-${hash}` : hash
 }
 
+export function generateAgencyId(agency: string | null | undefined, source: string): string | null {
+	if (!agency) return null;
+	return generateId(agency, `agency-${source}`)
+}
+
+export function generateDocumentId(title: string, source: string): string {
+	return generateId(title, `document-${source}`);
+}
+
+export function generatePersonId(name: string, source: string): string {
+	return generateId(name, `person-${source}`);
+}
+
 /**
  * Delay execution for specified milliseconds
  * 
@@ -106,7 +119,7 @@ export function getFilenameFromUrl(url: string): string | null {
  * Handles various date formats commonly found in procurement sites.
  * 
  * @param dateStr - Date string in various formats
- * @returns Date object or null if invalid
+ * @returns string or null if invalid
  * 
  * TODO: Implement date parsing
  * - Try parsing common formats:
@@ -118,7 +131,7 @@ export function getFilenameFromUrl(url: string): string | null {
  * - Return null if unable to parse
  * - Handle timezone indicators if present
  */
-export function parseFlexibleDate(dateStr: string | null): Date | null {
+export function parseFlexibleDate(dateStr: string | null | undefined): string | null {
 	if (!dateStr) return null
 	
 	// Clean the string
@@ -126,13 +139,13 @@ export function parseFlexibleDate(dateStr: string | null): Date | null {
 	
 	// Try ISO format first
 	let date = new Date(cleaned)
-	if (!isNaN(date.getTime())) return date
+	if (!isNaN(date.getTime())) return date.toISOString()
 	
 	// Try US format MM/DD/YYYY
 	const usMatch = cleaned.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
 	if (usMatch) {
 		date = new Date(`${usMatch[3]}-${usMatch[1].padStart(2, '0')}-${usMatch[2].padStart(2, '0')}`)
-		if (!isNaN(date.getTime())) return date
+		if (!isNaN(date.getTime())) return date.toISOString()
 	}
 	
 	return null
@@ -158,7 +171,7 @@ export function parseFlexibleDate(dateStr: string | null): Date | null {
  * - "$500K" => 500000
  * - "$1M - $5M" => 1000000
  */
-export function parseMonetaryValue(text: string | null): number | null {
+export function parseMonetaryValue(text: string | null | undefined): number | null {
 	if (!text) return null
 	
 	// Remove currency symbols and clean

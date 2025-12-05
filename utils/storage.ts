@@ -81,11 +81,12 @@ export async function saveBatchToFile(
  * - Write to file
  * - Log success message
  */
-export async function saveIntakeToFile(data: any, fileName: string): Promise<void> {
-	const intakeDir = './output/intake'
+export async function saveIntakeToFile(data: any, sessionDir: string, fileName: string): Promise<string> {
+	const intakeDir = `./output/intake/${sessionDir}`
 	await fs.mkdir(intakeDir, { recursive: true })
 	const filePath = path.join(intakeDir, `${fileName}.json`)
 	await fs.writeFile(filePath, JSON.stringify(data, null, 2))
+	return filePath;
 }
 
 /**

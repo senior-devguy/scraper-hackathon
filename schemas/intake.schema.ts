@@ -24,18 +24,20 @@ import { z } from 'zod'
 export const INTAKE_CONTRACT = z.object({
 	id: z.string(),
 	externalId: z.string(),
+	agencyId: z.string().nullable().optional(),
+	supplierId: z.string().nullable().optional(),
 	source: z.string(),
 	title: z.string(),
 	description: z.string().nullable().optional(),
+	eventType: z.string().nullable().optional(),
+	category: z.string().nullable().optional(),
 	publishedAt: z.string().nullable().optional(),
 	closingAt: z.string().nullable().optional(),
 	status: z.string(),
-	agencyId: z.string(),
 	amount: z.number().nullable().optional(),
 	sourceUrl: z.string().nullable().optional(),
 	scrapedAt: z.string(),
-	category: z.string().nullable().optional(),
-	eventType: z.string().nullable().optional(),
+	updatedAt: z.string().nullable().optional(),
 })
 
 /**

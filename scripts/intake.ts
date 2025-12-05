@@ -19,158 +19,15 @@
  */
 
 import { readBatchFiles, saveIntakeToFile } from '../utils/storage'
-import { 
-	ContractTransformer,
-	AgencyTransformer,
-	DocumentTransformer,
-	PeopleTransformer 
-} from '../base/BaseTransformer'
 import { deduplicateBy, log } from '../utils/helpers'
-import { SOURCE_TO_INTAKE } from '../schemas/PAeMarketplace/source.schema'
-import { INTAKE_OUTPUT } from '../schemas/PAeMarketplace/intake.schema'
-
-/**
- * PennsylvaniaContractTransformer
- */
-class PennsylvaniaContractTransformer extends ContractTransformer {
-	public transform(opportunity: any, source: string): any {
-		return {
-			id: this.generateContractId(opportunity.eventId, source),
-			externalId: opportunity.eventId,
-			source: source,
-			title: opportunity.title || 'Untitled Opportunity',
-			description: opportunity.description,
-			publishedAt: this.parseDate(opportunity.startDate),
-			closingAt: this.parseDate(opportunity.endDate),
-			status: this.normalizeStatus(opportunity.status),
-			agencyId: this.generateAgencyId(opportunity.agencyCode || opportunity.agencyName, source),
-			amount: this.parseAmount(opportunity.amount),
-			sourceUrl: opportunity.sourceUrl,
-			scrapedAt: new Date().toISOString(),
-			category: opportunity.category,
-			eventType: opportunity.eventType,
-		}
-	}
-
-	protected parseDate(dateStr: string | null): string | null {
-		if (!dateStr) return null
-		try {
-			const date = new Date(dateStr)
-			return isNaN(date.getTime()) ? null : date.toISOString()
-		} catch {
-			return null
-		}
-	}
-
-	protected generateContractId(eventId: string, source: string): string {
-		return `contract-${source}-${eventId}`.toLowerCase().replace(/[^a-z0-9-]/g, '-')
-	}
-
-	private generateAgencyId(agencyCode: string | null, source: string): string {
-		if (!agencyCode) return `agency-${source}-unknown`
-		return `agency-${source}-${agencyCode}`.toLowerCase().replace(/[^a-z0-9-]/g, '-')
-	}
-
-	private normalizeStatus(status: string | null): string {
-		if (!status) return 'unknown'
-		const lower = status.toLowerCase()
-		if (lower.includes('open') || lower.includes('active')) return 'open'
-		if (lower.includes('closed') || lower.includes('expired')) return 'closed'
-		if (lower.includes('awarded')) return 'awarded'
-		return 'unknown'
-	}
-
-	private parseAmount(amountStr: string | null): number | null {
-		if (!amountStr) return null
-		const cleaned = amountStr.replace(/[$,]/g, '')
-		const num = parseFloat(cleaned)
-		return isNaN(num) ? null : num
-	}
-}
-
-/**
- * PennsylvaniaAgencyTransformer
- */
-class PennsylvaniaAgencyTransformer extends AgencyTransformer {
-	public transform(opportunity: any, source: string): any {
-		if (!opportunity.agencyName && !opportunity.agencyCode) return null
-		
-		return {
-			id: this.generateAgencyId(opportunity.agencyCode || opportunity.agencyName, source),
-			externalId: opportunity.agencyCode || opportunity.agencyName,
-			source: source,
-			name: opportunity.agencyName || opportunity.agencyCode,
-			type: 'state',
-		}
-	}
-
-	protected generateAgencyId(agencyCode: string, source: string): string {
-		return `agency-${source}-${agencyCode}`.toLowerCase().replace(/[^a-z0-9-]/g, '-')
-	}
-}
-
-/**
- * PennsylvaniaDocumentTransformer
- */
-class PennsylvaniaDocumentTransformer extends DocumentTransformer {
-	public transform(document: any, contractId: string, source: string): any {
-		return {
-			id: this.generateDocumentId(document.downloadUrl, source),
-			contractId: contractId,
-			source: source,
-			fileName: document.fileName,
-			fileType: this.extractFileExtension(document.fileName),
-			fileSize: document.fileSize,
-			fileUrl: document.downloadUrl,
-			uploadedAt: document.createdAt,
-		}
-	}
-
-	protected extractFileExtension(fileName: string): string {
-		const match = fileName.match(/\.([^.]+)$/)
-		return match ? match[1].toLowerCase() : 'unknown'
-	}
-
-	protected generateDocumentId(documentUrl: string, source: string): string {
-		return `document-${source}-${documentUrl}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').substring(0, 50)
-	}
-}
-
-/**
- * PennsylvaniaPeopleTransformer
- */
-class PennsylvaniaPeopleTransformer extends PeopleTransformer {
-	public transform(opportunity: any, contractId: string, source: string): any {
-		if (!opportunity.contactEmail && !opportunity.contactName) {
-			return null
-		}
-		
-		return {
-			id: this.generatePersonId(opportunity.contactEmail || opportunity.contactName, source),
-			contractId: contractId,
-			source: source,
-			name: opportunity.contactName || 'Unknown Contact',
-			email: this.normalizeEmail(opportunity.contactEmail),
-			phone: this.normalizePhone(opportunity.contactPhone),
-			role: 'buyer',
-		}
-	}
-
-	protected normalizePhone(phone: string | null): string | null {
-		if (!phone) return null
-		return phone.replace(/[^0-9]/g, '').replace(/^1/, '')
-	}
-
-	protected normalizeEmail(email: string | null): string | null {
-		if (!email) return null
-		const trimmed = email.trim().toLowerCase()
-		return trimmed.includes('@') ? trimmed : null
-	}
-
-	protected generatePersonId(identifier: string, source: string): string {
-		return `person-${source}-${identifier}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').substring(0, 50)
-	}
-}
+import { SOURCE_DOCUMENT, SOURCE_OPPORTUNITY, SOURCE_TO_INTAKE } from '../schemas/PAeMarketplace/source.schema'
+import { INTAKE_AGENCY, INTAKE_CONTRACT, INTAKE_DOCUMENT, INTAKE_OUTPUT, INTAKE_PEOPLE } from '../schemas/intake.schema'
+import { PennsylvaniaAgencyTransformer } from '../transformers/PAeMarketplace/AgencyTransformer'
+import { PennsylvaniaContractTransformer } from '../transformers/PAeMarketplace/ContractTransformer'
+import { PennsylvaniaDocumentTransformer } from '../transformers/PAeMarketplace/DocumentTransformer'
+import { PennsylvaniaPeopleTransformer } from '../transformers/PAeMarketplace/PeopleTransformer'
+import { PennsylvaniaSupplierTransformer } from '../transformers/PAeMarketplace/SupplierTransformer'
+import { ContractTransformer, PeopleTransformer, DocumentTransformer, AgencyTransformer } from '../base/BaseTransformer'
 
 /**
  * Process intake
@@ -183,47 +40,68 @@ async function processIntake(sessionDir: string): Promise<void> {
 		log('intake', `Reading from: ${sessionDir}`, 'info')
 
 		// Read all batch files
-		const batches = await readBatchFiles(sessionDir)
+		const batches = await readBatchFiles(sessionDir);
+
+		if (batches.length === 0) {
+			throw new Error('No batch files found')
+		};
+
 		log('intake', `Found ${batches.length} batch files`, 'info')
 
 		// TODO: Validate batch data against SOURCE_TO_INTAKE schema
-		// for (const batch of batches) {
-		//   SOURCE_TO_INTAKE.parse(batch)
-		// }
-
-		// Initialize transformers
-		const contractTransformer = new PennsylvaniaContractTransformer()
-		const agencyTransformer = new PennsylvaniaAgencyTransformer()
-		const documentTransformer = new PennsylvaniaDocumentTransformer()
-		const peopleTransformer = new PennsylvaniaPeopleTransformer()
-
-		// Initialize output collections
-		const contracts: any[] = []
-		const agencies: any[] = []
-		const documents: any[] = []
-		const people: any[] = []
-
-		const source = batches[0]?.metadata?.source || 'unknown'
-
-		// Process each batch
 		for (const batch of batches) {
-			for (const item of batch.items) {
+		  SOURCE_TO_INTAKE.parse(batch)
+		}
+		 
+		// Initialize output collections
+		const source = batches[0]?.metadata?.source || 'unknown'
+		let contractTransformer: ContractTransformer;
+		let agencyTransformer: AgencyTransformer;
+		let supplierTransformer: AgencyTransformer;
+		let documentTransformer: DocumentTransformer;
+		let peopleTransformer: PeopleTransformer;
+
+		switch (source) {
+			case 'pennsylvania':
+				contractTransformer = new PennsylvaniaContractTransformer()
+				agencyTransformer = new PennsylvaniaAgencyTransformer()
+				supplierTransformer = new PennsylvaniaSupplierTransformer()
+				documentTransformer = new PennsylvaniaDocumentTransformer()
+				peopleTransformer = new PennsylvaniaPeopleTransformer()
+				break;
+			default:
+				throw new Error(`Unknown source: ${source}`)
+		}
+		
+		const contracts: INTAKE_CONTRACT[] = []
+		const agencies: INTAKE_AGENCY[] = []
+		const documents: INTAKE_DOCUMENT[] = []
+		const people: INTAKE_PEOPLE[] = []
+		// Process each batch
+		for (const batch of batches as SOURCE_TO_INTAKE[]) {
+			for (const item of batch.items as SOURCE_OPPORTUNITY[]) {
 				// Transform contract
-				const contract = contractTransformer.transform(item.opportunity, source)
+				const contract: INTAKE_CONTRACT = contractTransformer.transform(item.contract, source)
+				contract.sourceUrl = item.url
+				contract.scrapedAt = batch.metadata.scrapedAt
 				contracts.push(contract)
 
 				// Transform agency
-				const agency = agencyTransformer.transform(item.opportunity, source)
+				const agency = agencyTransformer.transform(item.contract, source)
 				if (agency) agencies.push(agency)
 
+				// Transform agency
+				const supplier = supplierTransformer.transform(item.contract, source)
+				if (supplier) agencies.push(supplier)
+
 				// Transform documents
-				for (const doc of item.documents) {
+				for (const doc of item.documents as SOURCE_DOCUMENT[]) {
 					const document = documentTransformer.transform(doc, contract.id, source)
 					documents.push(document)
 				}
 
 				// Transform people
-				const person = peopleTransformer.transform(item.opportunity, contract.id, source)
+				const person = peopleTransformer.transform(item.contract, contract.id, source)
 				if (person) people.push(person)
 			}
 		}
@@ -251,14 +129,15 @@ async function processIntake(sessionDir: string): Promise<void> {
 		}
 
 		// TODO: Validate output against INTAKE_OUTPUT schema
-		// INTAKE_OUTPUT.parse(output)
+		INTAKE_OUTPUT.parse(output)
 
 		// Save intake output
+		const sessionName = sessionDir.split('/').pop() || sessionDir.split('\\').pop() || 'unknown'
 		const fileName = `intake_${source}_${Date.now()}`
-		await saveIntakeToFile(output, fileName)
+		const savedIntakePath = await saveIntakeToFile(output, sessionName, fileName)
 
 		log('intake', 'Intake process complete!', 'info')
-		log('intake', `Output file: ./output/intake/${fileName}.json`, 'info')
+		log('intake', `Output file: ${savedIntakePath}`, 'info')
 
 	} catch (error) {
 		log('intake', `Fatal error: ${error}`, 'error')
@@ -276,7 +155,7 @@ async function main() {
 
 		if (!sessionDir) {
 			console.error('Usage: npm run intake <session_directory>')
-			console.error('Example: npm run intake ./output/source/session_yourstate_2024-01-15_1705334400000')
+			console.error('Example: npm run intake ./output/source/session_yourstate_xxx')
 			process.exit(1)
 		}
 

@@ -4,14 +4,14 @@
  * Parse command line arguments and provide date range utilities.
  * 
  * Supported flags:
- * - --today: Scrape data from today only
- * - --date-range=yyyy-MM-dd,yyyy-MM-dd: Scrape data from custom date range
+ * - today: Scrape data from today only
+ * - date-range=yyyy-MM-dd,yyyy-MM-dd: Scrape data from custom date range
  * - Default: Scrape data from previous day
  * 
  * Examples:
  * - npm run scraper (scrapes yesterday)
- * - npm run scraper --today (scrapes today)
- * - npm run scraper --date-range=2024-01-01,2024-01-31 (scrapes January 2024)
+ * - npm run scraper today (scrapes today)
+ * - npm run scraper date-range=2024-01-01,2024-01-31 (scrapes January 2024)
  */
 
 export interface DateRange {
@@ -28,8 +28,8 @@ export interface DateRange {
  * 
  * TODO: Implement argument parsing
  * - Parse process.argv
- * - Look for --today flag
- * - Look for --date-range flag with format validation
+ * - Look for today flag
+ * - Look for date-range flag with format validation
  * - Return object with parsed options
  */
 export function parseArgs(): {
@@ -41,22 +41,22 @@ export function parseArgs(): {
 	batchSize: number | null
 } {
 	const args = process.argv.slice(2)
-	
-	const sourceArg = args.find(arg => arg.startsWith('--source='))
+	console.log('args', args)
+	const sourceArg = args.find(arg => arg.startsWith('source='))
 	const source = sourceArg ? sourceArg.split('=')[1] : null
 
-	const startPageArg = args.find(arg => arg.startsWith('--start-page='))
+	const startPageArg = args.find(arg => arg.startsWith('start-page='))
 	const startPage = startPageArg ? parseInt(startPageArg.split('=')[1]) : null
 
-	const endPageArg = args.find(arg => arg.startsWith('--end-page='))
+	const endPageArg = args.find(arg => arg.startsWith('end-page='))
 	const endPage = endPageArg ? parseInt(endPageArg.split('=')[1]) : null
 
-	const batchSizeArg = args.find(arg => arg.startsWith('--batch='))
+	const batchSizeArg = args.find(arg => arg.startsWith('batch='))
 	const batchSize = batchSizeArg ? parseInt(batchSizeArg.split('=')[1]) : null
 
-	const isToday = args.includes('--today')
+	const isToday = args.includes('today')
 
-	const dateRangeArg = args.find(arg => arg.startsWith('--date-range='))
+	const dateRangeArg = args.find(arg => arg.startsWith('date-range='))
 	const dateRange = dateRangeArg ? dateRangeArg.split('=')[1] : null
 
 	return { source, startPage, endPage, batchSize, isToday, dateRange }
@@ -71,8 +71,8 @@ export function parseArgs(): {
  * 
  * TODO: Implement date range logic
  * - Call parseArgs() to get CLI options
- * - If --today flag: return today's date range
- * - If --date-range flag: parse and validate dates
+ * - If today flag: return today's date range
+ * - If date-range flag: parse and validate dates
  * - Default: return yesterday's date range
  * - Handle invalid date formats gracefully
  * - Use UTC dates to avoid timezone issues

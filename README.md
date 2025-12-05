@@ -25,6 +25,8 @@ Build a complete scraping solution that:
 - Handle pagination efficiently
 - Implement polite scraping (delays between requests)
 
+npm run scraper source=PA start-page=1 end-page=10
+
 #### Intake (`intake.ts`)
 - Read scraped data from JSON files
 - Transform data using dedicated transformer classes
