@@ -26,164 +26,149 @@ import {
 	PeopleTransformer 
 } from '../base/BaseTransformer'
 import { deduplicateBy, log } from '../utils/helpers'
-import { SOURCE_TO_INTAKE } from '../schemas/source.schema'
-import { INTAKE_OUTPUT } from '../schemas/intake.schema'
+import { SOURCE_TO_INTAKE } from '../schemas/PAeMarketplace/source.schema'
+import { INTAKE_OUTPUT } from '../schemas/PAeMarketplace/intake.schema'
 
 /**
- * YourStateContractTransformer
- * 
- * TODO: Implement contract transformation logic
+ * PennsylvaniaContractTransformer
  */
-class YourStateContractTransformer extends ContractTransformer {
+class PennsylvaniaContractTransformer extends ContractTransformer {
 	public transform(opportunity: any, source: string): any {
-		// TODO: Implement transformation
-		// Map fields from SOURCE_OPPORTUNITY to INTAKE_CONTRACT
-		// Example:
-		// return {
-		//   id: this.generateContractId(opportunity.eventId, source),
-		//   externalId: opportunity.eventId,
-		//   source: source,
-		//   title: opportunity.title,
-		//   description: opportunity.description,
-		//   publishedAt: this.parseDate(opportunity.startDate),
-		//   closingAt: this.parseDate(opportunity.endDate),
-		//   status: this.normalizeStatus(opportunity.status),
-		//   agencyId: this.generateAgencyId(opportunity.agencyCode, source),
-		//   sourceUrl: opportunity.sourceUrl,
-		//   scrapedAt: new Date().toISOString(),
-		// }
-		
-		throw new Error('ContractTransformer.transform not implemented')
+		return {
+			id: this.generateContractId(opportunity.eventId, source),
+			externalId: opportunity.eventId,
+			source: source,
+			title: opportunity.title || 'Untitled Opportunity',
+			description: opportunity.description,
+			publishedAt: this.parseDate(opportunity.startDate),
+			closingAt: this.parseDate(opportunity.endDate),
+			status: this.normalizeStatus(opportunity.status),
+			agencyId: this.generateAgencyId(opportunity.agencyCode || opportunity.agencyName, source),
+			amount: this.parseAmount(opportunity.amount),
+			sourceUrl: opportunity.sourceUrl,
+			scrapedAt: new Date().toISOString(),
+			category: opportunity.category,
+			eventType: opportunity.eventType,
+		}
 	}
 
 	protected parseDate(dateStr: string | null): string | null {
-		// TODO: Implement date parsing
-		throw new Error('parseDate not implemented')
+		if (!dateStr) return null
+		try {
+			const date = new Date(dateStr)
+			return isNaN(date.getTime()) ? null : date.toISOString()
+		} catch {
+			return null
+		}
 	}
 
 	protected generateContractId(eventId: string, source: string): string {
-		// TODO: Implement ID generation
-		throw new Error('generateContractId not implemented')
+		return `contract-${source}-${eventId}`.toLowerCase().replace(/[^a-z0-9-]/g, '-')
 	}
 
-	private generateAgencyId(agencyCode: string, source: string): string {
-		// TODO: Implement agency ID generation
-		throw new Error('generateAgencyId not implemented')
+	private generateAgencyId(agencyCode: string | null, source: string): string {
+		if (!agencyCode) return `agency-${source}-unknown`
+		return `agency-${source}-${agencyCode}`.toLowerCase().replace(/[^a-z0-9-]/g, '-')
 	}
 
 	private normalizeStatus(status: string | null): string {
-		// TODO: Implement status normalization
-		// Map source-specific statuses to standard values
-		// Example: "Open" => "open", "Closed" => "closed"
-		throw new Error('normalizeStatus not implemented')
+		if (!status) return 'unknown'
+		const lower = status.toLowerCase()
+		if (lower.includes('open') || lower.includes('active')) return 'open'
+		if (lower.includes('closed') || lower.includes('expired')) return 'closed'
+		if (lower.includes('awarded')) return 'awarded'
+		return 'unknown'
+	}
+
+	private parseAmount(amountStr: string | null): number | null {
+		if (!amountStr) return null
+		const cleaned = amountStr.replace(/[$,]/g, '')
+		const num = parseFloat(cleaned)
+		return isNaN(num) ? null : num
 	}
 }
 
 /**
- * YourStateAgencyTransformer
- * 
- * TODO: Implement agency transformation logic
+ * PennsylvaniaAgencyTransformer
  */
-class YourStateAgencyTransformer extends AgencyTransformer {
+class PennsylvaniaAgencyTransformer extends AgencyTransformer {
 	public transform(opportunity: any, source: string): any {
-		// TODO: Implement transformation
-		// Extract and transform agency data
-		// Example:
-		// return {
-		//   id: this.generateAgencyId(opportunity.agencyCode, source),
-		//   externalId: opportunity.agencyCode,
-		//   source: source,
-		//   name: opportunity.agencyName,
-		//   type: this.normalizeAgencyType(opportunity.governmentType),
-		// }
+		if (!opportunity.agencyName && !opportunity.agencyCode) return null
 		
-		throw new Error('AgencyTransformer.transform not implemented')
+		return {
+			id: this.generateAgencyId(opportunity.agencyCode || opportunity.agencyName, source),
+			externalId: opportunity.agencyCode || opportunity.agencyName,
+			source: source,
+			name: opportunity.agencyName || opportunity.agencyCode,
+			type: 'state',
+		}
 	}
 
 	protected generateAgencyId(agencyCode: string, source: string): string {
-		// TODO: Implement ID generation
-		throw new Error('generateAgencyId not implemented')
-	}
-
-	private normalizeAgencyType(govType: string | null): string | null {
-		// TODO: Implement type normalization
-		throw new Error('normalizeAgencyType not implemented')
+		return `agency-${source}-${agencyCode}`.toLowerCase().replace(/[^a-z0-9-]/g, '-')
 	}
 }
 
 /**
- * YourStateDocumentTransformer
- * 
- * TODO: Implement document transformation logic
+ * PennsylvaniaDocumentTransformer
  */
-class YourStateDocumentTransformer extends DocumentTransformer {
+class PennsylvaniaDocumentTransformer extends DocumentTransformer {
 	public transform(document: any, contractId: string, source: string): any {
-		// TODO: Implement transformation
-		// Example:
-		// return {
-		//   id: this.generateDocumentId(document.downloadUrl, source),
-		//   contractId: contractId,
-		//   source: source,
-		//   fileName: document.fileName,
-		//   fileType: this.extractFileExtension(document.fileName),
-		//   fileSize: document.fileSize,
-		//   fileUrl: document.downloadUrl,
-		//   uploadedAt: document.createdAt,
-		// }
-		
-		throw new Error('DocumentTransformer.transform not implemented')
+		return {
+			id: this.generateDocumentId(document.downloadUrl, source),
+			contractId: contractId,
+			source: source,
+			fileName: document.fileName,
+			fileType: this.extractFileExtension(document.fileName),
+			fileSize: document.fileSize,
+			fileUrl: document.downloadUrl,
+			uploadedAt: document.createdAt,
+		}
 	}
 
 	protected extractFileExtension(fileName: string): string {
-		// TODO: Implement extension extraction
-		throw new Error('extractFileExtension not implemented')
+		const match = fileName.match(/\.([^.]+)$/)
+		return match ? match[1].toLowerCase() : 'unknown'
 	}
 
 	protected generateDocumentId(documentUrl: string, source: string): string {
-		// TODO: Implement ID generation
-		throw new Error('generateDocumentId not implemented')
+		return `document-${source}-${documentUrl}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').substring(0, 50)
 	}
 }
 
 /**
- * YourStatePeopleTransformer
- * 
- * TODO: Implement people transformation logic
+ * PennsylvaniaPeopleTransformer
  */
-class YourStatePeopleTransformer extends PeopleTransformer {
+class PennsylvaniaPeopleTransformer extends PeopleTransformer {
 	public transform(opportunity: any, contractId: string, source: string): any {
-		// TODO: Implement transformation
-		// Return null if no contact info
-		// Example:
-		// if (!opportunity.contactEmail && !opportunity.contactName) {
-		//   return null
-		// }
-		// return {
-		//   id: this.generatePersonId(opportunity.contactEmail, source),
-		//   contractId: contractId,
-		//   source: source,
-		//   name: opportunity.contactName,
-		//   email: this.normalizeEmail(opportunity.contactEmail),
-		//   phone: this.normalizePhone(opportunity.contactPhone),
-		//   role: 'buyer',
-		// }
+		if (!opportunity.contactEmail && !opportunity.contactName) {
+			return null
+		}
 		
-		throw new Error('PeopleTransformer.transform not implemented')
+		return {
+			id: this.generatePersonId(opportunity.contactEmail || opportunity.contactName, source),
+			contractId: contractId,
+			source: source,
+			name: opportunity.contactName || 'Unknown Contact',
+			email: this.normalizeEmail(opportunity.contactEmail),
+			phone: this.normalizePhone(opportunity.contactPhone),
+			role: 'buyer',
+		}
 	}
 
 	protected normalizePhone(phone: string | null): string | null {
-		// TODO: Implement phone normalization
-		throw new Error('normalizePhone not implemented')
+		if (!phone) return null
+		return phone.replace(/[^0-9]/g, '').replace(/^1/, '')
 	}
 
 	protected normalizeEmail(email: string | null): string | null {
-		// TODO: Implement email normalization
-		throw new Error('normalizeEmail not implemented')
+		if (!email) return null
+		const trimmed = email.trim().toLowerCase()
+		return trimmed.includes('@') ? trimmed : null
 	}
 
-	protected generatePersonId(email: string, source: string): string {
-		// TODO: Implement ID generation
-		throw new Error('generatePersonId not implemented')
+	protected generatePersonId(identifier: string, source: string): string {
+		return `person-${source}-${identifier}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').substring(0, 50)
 	}
 }
 
@@ -207,10 +192,10 @@ async function processIntake(sessionDir: string): Promise<void> {
 		// }
 
 		// Initialize transformers
-		const contractTransformer = new YourStateContractTransformer()
-		const agencyTransformer = new YourStateAgencyTransformer()
-		const documentTransformer = new YourStateDocumentTransformer()
-		const peopleTransformer = new YourStatePeopleTransformer()
+		const contractTransformer = new PennsylvaniaContractTransformer()
+		const agencyTransformer = new PennsylvaniaAgencyTransformer()
+		const documentTransformer = new PennsylvaniaDocumentTransformer()
+		const peopleTransformer = new PennsylvaniaPeopleTransformer()
 
 		// Initialize output collections
 		const contracts: any[] = []
@@ -220,60 +205,60 @@ async function processIntake(sessionDir: string): Promise<void> {
 
 		const source = batches[0]?.metadata?.source || 'unknown'
 
-		// TODO: Process each batch
-		// for (const batch of batches) {
-		//   for (const item of batch.items) {
-		//     // Transform contract
-		//     const contract = contractTransformer.transform(item.opportunity, source)
-		//     contracts.push(contract)
-		//
-		//     // Transform agency
-		//     const agency = agencyTransformer.transform(item.opportunity, source)
-		//     if (agency) agencies.push(agency)
-		//
-		//     // Transform documents
-		//     for (const doc of item.documents) {
-		//       const document = documentTransformer.transform(doc, contract.id, source)
-		//       documents.push(document)
-		//     }
-		//
-		//     // Transform people
-		//     const person = peopleTransformer.transform(item.opportunity, contract.id, source)
-		//     if (person) people.push(person)
-		//   }
-		// }
+		// Process each batch
+		for (const batch of batches) {
+			for (const item of batch.items) {
+				// Transform contract
+				const contract = contractTransformer.transform(item.opportunity, source)
+				contracts.push(contract)
+
+				// Transform agency
+				const agency = agencyTransformer.transform(item.opportunity, source)
+				if (agency) agencies.push(agency)
+
+				// Transform documents
+				for (const doc of item.documents) {
+					const document = documentTransformer.transform(doc, contract.id, source)
+					documents.push(document)
+				}
+
+				// Transform people
+				const person = peopleTransformer.transform(item.opportunity, contract.id, source)
+				if (person) people.push(person)
+			}
+		}
 
 		log('intake', `Processed ${contracts.length} contracts`, 'info')
 
-		// TODO: Deduplicate agencies and people
-		// const uniqueAgencies = deduplicateBy(agencies, (a) => a.id)
-		// const uniquePeople = deduplicateBy(people, (p) => p.id)
+		// Deduplicate agencies and people
+		const uniqueAgencies = deduplicateBy(agencies, (a) => a.id)
+		const uniquePeople = deduplicateBy(people, (p) => p.id)
 
-		// TODO: Create intake output
-		// const output = {
-		//   contracts: contracts,
-		//   agencies: uniqueAgencies,
-		//   documents: documents,
-		//   people: uniquePeople,
-		//   metadata: {
-		//     processedAt: new Date().toISOString(),
-		//     source: source,
-		//     totalContracts: contracts.length,
-		//     totalAgencies: uniqueAgencies.length,
-		//     totalDocuments: documents.length,
-		//     totalPeople: uniquePeople.length,
-		//   },
-		// }
+		// Create intake output
+		const output = {
+			contracts: contracts,
+			agencies: uniqueAgencies,
+			documents: documents,
+			people: uniquePeople,
+			metadata: {
+				processedAt: new Date().toISOString(),
+				source: source,
+				totalContracts: contracts.length,
+				totalAgencies: uniqueAgencies.length,
+				totalDocuments: documents.length,
+				totalPeople: uniquePeople.length,
+			},
+		}
 
 		// TODO: Validate output against INTAKE_OUTPUT schema
 		// INTAKE_OUTPUT.parse(output)
 
-		// TODO: Save intake output
-		// const fileName = `intake_${source}_${Date.now()}`
-		// await saveIntakeToFile(output, fileName)
+		// Save intake output
+		const fileName = `intake_${source}_${Date.now()}`
+		await saveIntakeToFile(output, fileName)
 
 		log('intake', 'Intake process complete!', 'info')
-		// log('intake', `Output file: ./output/intake/${fileName}.json`, 'info')
+		log('intake', `Output file: ./output/intake/${fileName}.json`, 'info')
 
 	} catch (error) {
 		log('intake', `Fatal error: ${error}`, 'error')

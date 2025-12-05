@@ -1,4 +1,13 @@
 import { Page, Browser } from 'playwright'
+import { delay, log } from '../utils/helpers';
+
+/**
+ * Scraping session result
+ */
+export interface ScrapingResult {
+	sessionDir: string
+	itemsCount: number
+}
 
 /**
  * ScraperConfig
@@ -7,9 +16,9 @@ import { Page, Browser } from 'playwright'
  */
 export interface ScraperConfig {
 	source: string
-	dateRange: { from: Date; to: Date }
-	batchSize?: number
-	maxPages?: number
+	batchSize: number
+	startPage: number
+	endPage: number
 }
 
 /**
@@ -39,36 +48,92 @@ export abstract class BaseScraper {
 	protected batchNum: number = 1
 	protected totalProcessed: number = 0
 	protected sessionDirName: string = ''
+	protected LOG_SOURCE: string = 'BaseScraper';
 
 	constructor(config: ScraperConfig) {
 		this.config = config
+		this.currentPage = config.startPage
 	}
 
 	/**
 	 * Main execution method
-	 * 
-	 * This method orchestrates the entire scraping process:
-	 * 1. Initialize browser and session
-	 * 2. Loop through pages of listings
-	 * 3. Process each opportunity
-	 * 4. Save batches incrementally
-	 * 5. Clean up resources
-	 * 
-	 * @returns Object containing session directory and total items scraped
-	 * 
-	 * TODO: Implement the main scraping workflow
-	 * - Launch browser using launchBrowser()
-	 * - Create session directory using createSessionDirectory()
-	 * - Implement pagination loop
-	 * - Call fetchListings() for each page
-	 * - Call processOpportunity() for each listing
-	 * - Call saveBatch() after each page
-	 * - Handle cleanup in finally block
 	 */
-	public async run(): Promise<{ sessionDir: string; itemsCount: number }> {
-		// TODO: Implement main scraping workflow
-		throw new Error('Method not implemented')
+	public async run(): Promise<ScrapingResult> {
+		try {
+			// Initialize browser and session
+			this.browser = await this.launchBrowser()
+			await this.createSessionDirectory()
+			
+			const page = await this.browser.newPage()
+			
+			// Initiate Listings
+			await this.initListings(page);
+
+			// Loop through pages
+			while (this.currentPage <= this.config.endPage) {
+				log(this.LOG_SOURCE, `[scraper] Fetching page ${this.currentPage}...`, 'info');
+				
+				// Fetch listings for current page
+				const listings = await this.fetchListings(
+					page,
+					this.currentPage,
+					this.config.batchSize
+				)
+				
+				if (listings.length === 0) {
+					log(this.LOG_SOURCE, `[scraper] No more listings found on page ${this.currentPage}`, 'info');
+					break
+				}
+				
+				// Process each opportunity
+				const batchItems = []
+				for (const listing of listings) {
+					const item = await this.processOpportunity(this.browser, listing)
+					if (item) {
+						batchItems.push(item)
+						this.totalProcessed++
+					}
+					
+					// Add delay between requests
+					await delay(1000)
+				}
+				
+				// Save batch
+				if (batchItems.length > 0) {
+					await this.saveBatch(batchItems)
+				}
+				
+				this.currentPage++
+			}
+			
+			await page.close()
+			
+			return {
+				sessionDir: this.sessionDirName,
+				itemsCount: this.totalProcessed
+			}
+		} 
+		catch (error) {
+			log(this.LOG_SOURCE, JSON.stringify(error), 'error');
+			throw error
+		}
+		finally {
+			if (this.browser) {
+				await this.browser.close()
+			}
+		}
 	}
+
+	/**
+	 * Initiate listing page
+	 * 
+	 * This method does the search action when needed.
+	 * 
+	 * @param config - ScraperConfig
+	 * @returns boolean (true / false)
+	 * 
+	 */
+	protected abstract initListings(page: Page): void;
 
 	/**
 	 * Fetch a page of opportunity listings
@@ -164,16 +229,5 @@ export abstract class BaseScraper {
 	 * - Call createSessionDirectory() utility
 	 */
 	protected abstract createSessionDirectory(): Promise<void>
-
-	/**
-	 * Helper method to add delays between requests
-	 * 
-	 * Use this to be polite to the target server.
-	 * 
-	 * @param ms - Milliseconds to delay
-	 */
-	protected async delay(ms: number): Promise<void> {
-		return new Promise(resolve => setTimeout(resolve, ms))
-	}
 }
 

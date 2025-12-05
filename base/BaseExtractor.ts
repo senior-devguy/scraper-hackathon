@@ -35,111 +35,99 @@ export abstract class BaseExtractor<T> {
 
 	/**
 	 * Extract text from a locator
-	 * 
-	 * Helper method to safely extract text content.
-	 * 
-	 * @param locator - Playwright locator
-	 * @returns Extracted text or null if not found
-	 * 
-	 * TODO: Implement text extraction
-	 * - Check if locator exists (count > 0)
-	 * - Get textContent
-	 * - Trim whitespace
-	 * - Return null if empty or not found
 	 */
 	protected async extractText(locator: Locator): Promise<string | null> {
-		// TODO: Implement text extraction
-		throw new Error('Method not implemented')
+		try {
+			const count = await locator.count()
+			if (count === 0) return null
+			
+			const text = await locator.textContent()
+			if (!text) return null
+			
+			const trimmed = text.trim()
+			return trimmed || null
+		} catch {
+			return null
+		}
 	}
 
 	/**
 	 * Extract attribute from a locator
-	 * 
-	 * Helper method to safely extract element attributes.
-	 * 
-	 * @param locator - Playwright locator
-	 * @param attribute - Attribute name (e.g., 'href', 'data-id')
-	 * @returns Attribute value or null if not found
-	 * 
-	 * TODO: Implement attribute extraction
-	 * - Check if locator exists
-	 * - Get attribute value
-	 * - Return null if not found
 	 */
 	protected async extractAttribute(
 		locator: Locator,
 		attribute: string
 	): Promise<string | null> {
-		// TODO: Implement attribute extraction
-		throw new Error('Method not implemented')
+		try {
+			const count = await locator.count()
+			if (count === 0) return null
+			
+			return await locator.getAttribute(attribute)
+		} catch {
+			return null
+		}
 	}
 
 	/**
 	 * Extract data from a table
-	 * 
-	 * Helper method to extract structured data from HTML tables.
-	 * 
-	 * @param page - Playwright page instance
-	 * @param tableSelector - CSS selector for the table
-	 * @returns Array of row data objects
-	 * 
-	 * TODO: Implement table extraction
-	 * - Locate the table
-	 * - Extract headers from <th> elements
-	 * - Iterate through <tr> rows
-	 * - Extract cell data from <td> elements
-	 * - Return array of objects (one per row)
 	 */
 	protected async extractTable(
 		page: Page,
 		tableSelector: string
 	): Promise<Record<string, string>[]> {
-		// TODO: Implement table extraction
-		throw new Error('Method not implemented')
+		try {
+			const table = page.locator(tableSelector)
+			if (await table.count() === 0) return []
+			
+			const headers = await table.locator('th').allTextContents()
+			const rows = await table.locator('tbody tr').all()
+			
+			const result = []
+			for (const row of rows) {
+				const cells = await row.locator('td').allTextContents()
+				const rowData: Record<string, string> = {}
+				
+				for (let i = 0; i < headers.length && i < cells.length; i++) {
+					rowData[headers[i].trim()] = cells[i].trim()
+				}
+				
+				result.push(rowData)
+			}
+			
+			return result
+		} catch {
+			return []
+		}
 	}
 
 	/**
 	 * Extract data from multiple possible selectors
-	 * 
-	 * Try multiple selectors in order until one returns data.
-	 * Useful when the page structure varies.
-	 * 
-	 * @param page - Playwright page instance
-	 * @param selectors - Array of CSS selectors to try
-	 * @returns Extracted text or null
-	 * 
-	 * TODO: Implement fallback selector logic
-	 * - Loop through selectors
-	 * - Try each one using extractText()
-	 * - Return first non-null result
-	 * - Return null if all fail
 	 */
 	protected async extractFromMultipleSelectors(
 		page: Page,
 		selectors: string[]
 	): Promise<string | null> {
-		// TODO: Implement fallback selector logic
-		throw new Error('Method not implemented')
+		for (const selector of selectors) {
+			const result = await this.extractText(page.locator(selector))
+			if (result) return result
+		}
+		return null
 	}
 
 	/**
 	 * Wait for and click a tab, then wait for content
-	 * 
-	 * Helper for extracting data from tabbed interfaces.
-	 * 
-	 * @param page - Playwright page instance
-	 * @param tabSelector - CSS selector for the tab to click
-	 * @returns True if tab was clicked successfully
-	 * 
-	 * TODO: Implement tab clicking logic
-	 * - Check if tab exists
-	 * - Click the tab
-	 * - Wait for tab content to load
-	 * - Return success status
 	 */
 	protected async clickTab(page: Page, tabSelector: string): Promise<boolean> {
-		// TODO: Implement tab clicking logic
-		throw new Error('Method not implemented')
+		try {
+			const tab = page.locator(tabSelector)
+			if (await tab.count() === 0) return false
+			
+			await tab.click()
+			await page.waitForTimeout(1000) // Wait for content to load
+			return true
+		} catch {
+			return false
+		}
 	}
 }
 

@@ -34,12 +34,32 @@ export interface DateRange {
  */
 export function parseArgs(): {
 	isToday: boolean
-	dateRange: string | null
+	dateRange: string | null,
+	source: string | null,
+	startPage: number | null,
+	endPage: number | null,
+	batchSize: number | null
 } {
-	// TODO: Implement argument parsing
-	// Hint: process.argv contains command line arguments
-	// Example: ['node', 'scraper.js', '--today']
-	throw new Error('Function not implemented')
+	const args = process.argv.slice(2)
+	
+	const sourceArg = args.find(arg => arg.startsWith('--source='))
+	const source = sourceArg ? sourceArg.split('=')[1] : null
+
+	const startPageArg = args.find(arg => arg.startsWith('--start-page='))
+	const startPage = startPageArg ? parseInt(startPageArg.split('=')[1]) : null
+
+	const endPageArg = args.find(arg => arg.startsWith('--end-page='))
+	const endPage = endPageArg ? parseInt(endPageArg.split('=')[1]) : null
+
+	const batchSizeArg = args.find(arg => arg.startsWith('--batch='))
+	const batchSize = batchSizeArg ? parseInt(batchSizeArg.split('=')[1]) : null
+
+	const isToday = args.includes('--today')
+
+	const dateRangeArg = args.find(arg => arg.startsWith('--date-range='))
+	const dateRange = dateRangeArg ? dateRangeArg.split('=')[1] : null
+
+	return { source, startPage, endPage, batchSize, isToday, dateRange }
 }
 
 /**
@@ -57,9 +77,23 @@ export function parseArgs(): {
  * - Handle invalid date formats gracefully
  * - Use UTC dates to avoid timezone issues
  */
-export function getDateRange(): DateRange {
-	// TODO: Implement date range logic
-	throw new Error('Function not implemented')
+export function getDateRange(): DateRange | null {
+	const { isToday, dateRange } = parseArgs()
+	
+	if (dateRange) {
+		const [fromStr, toStr] = dateRange.split(',')
+		const from = parseDate(fromStr)
+		const to = parseDate(toStr)
+		if (!from || !to) throw new Error('Invalid date range format')
+		return { from, to }
+	}
+	
+	if (isToday) {
+		const today = getToday()
+		return { from: today, to: today }
+	}
+	
+	return null;
 }
 
 /**
@@ -74,8 +108,10 @@ export function getDateRange(): DateRange {
  * - Pad month and day with zeros
  */
 export function formatDate(date: Date): string {
-	// TODO: Implement date formatting
-	throw new Error('Function not implemented')
+	const year = date.getUTCFullYear()
+	const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+	const day = String(date.getUTCDate()).padStart(2, '0')
+	return `${year}-${month}-${day}`
 }
 
 /**
@@ -91,8 +127,11 @@ export function formatDate(date: Date): string {
  * - Return null for invalid dates
  */
 export function parseDate(dateStr: string): Date | null {
-	// TODO: Implement date parsing
-	throw new Error('Function not implemented')
+	const regex = /^\d{4}-\d{2}-\d{2}$/
+	if (!regex.test(dateStr)) return null
+	
+	const date = new Date(dateStr + 'T00:00:00.000Z')
+	return isNaN(date.getTime()) ? null : date
 }
 
 /**
@@ -106,8 +145,10 @@ export function parseDate(dateStr: string): Date | null {
  * - Return Date object
  */
 export function getYesterday(): Date {
-	// TODO: Implement yesterday calculation
-	throw new Error('Function not implemented')
+	const date = new Date()
+	date.setUTCDate(date.getUTCDate() - 1)
+	date.setUTCHours(0, 0, 0, 0)
+	return date
 }
 
 /**
@@ -121,7 +162,8 @@ export function getYesterday(): Date {
  * - Return Date object
  */
 export function getToday(): Date {
-	// TODO: Implement today calculation
-	throw new Error('Function not implemented')
+	const date = new Date()
+	date.setUTCHours(0, 0, 0, 0)
+	return date
 }
 

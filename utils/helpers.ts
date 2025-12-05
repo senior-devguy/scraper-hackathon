@@ -26,8 +26,8 @@ import * as crypto from 'crypto'
  * Example: generateId('GA-2024-001', 'contract') => 'contract-a1b2c3d4e5f6g7h8'
  */
 export function generateId(input: string, prefix?: string): string {
-	// TODO: Implement ID generation
-	throw new Error('Function not implemented')
+	const hash = crypto.createHash('sha256').update(input).digest('hex').substring(0, 16)
+	return prefix ? `${prefix.split(' ').join('_')}-${hash}` : hash
 }
 
 /**
@@ -42,8 +42,7 @@ export function generateId(input: string, prefix?: string): string {
  * - Use setTimeout
  */
 export async function delay(ms: number): Promise<void> {
-	// TODO: Implement delay
-	throw new Error('Function not implemented')
+	return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 /**
@@ -61,8 +60,9 @@ export async function delay(ms: number): Promise<void> {
  * - Return null if empty after cleaning
  */
 export function cleanText(text: string | null | undefined): string | null {
-	// TODO: Implement text cleaning
-	throw new Error('Function not implemented')
+	if (!text) return null
+	const cleaned = text.trim().replace(/\s+/g, ' ').replace(/\n/g, ' ')
+	return cleaned || null
 }
 
 /**
@@ -80,8 +80,24 @@ export function cleanText(text: string | null | undefined): string | null {
  * - Ensure valid extension remains intact
  */
 export function sanitizeFileName(fileName: string): string {
-	// TODO: Implement filename sanitization
-	throw new Error('Function not implemented')
+	return fileName.trim().replace(/[/\\:*?"<>|]/g, '_')
+}
+
+/**
+ * Extract filename from url
+ * 
+ * Extract filename only from url
+ * 
+ */
+export function getFilenameFromUrl(url: string): string | null {
+  const u = new URL(url);
+  const fileParam = u.searchParams.get("file");
+  if (!fileParam) return null;
+
+  // Normalize backslashes to forward slashes
+  const normalized = fileParam.replace(/\\/g, "/");
+
+  return normalized.split("/").pop() || null;
 }
 
 /**
@@ -103,8 +119,23 @@ export function sanitizeFileName(fileName: string): string {
  * - Handle timezone indicators if present
  */
 export function parseFlexibleDate(dateStr: string | null): Date | null {
-	// TODO: Implement flexible date parsing
-	throw new Error('Function not implemented')
+	if (!dateStr) return null
+	
+	// Clean the string
+	const cleaned = dateStr.replace(/@.*$/, '').trim()
+	
+	// Try ISO format first
+	let date = new Date(cleaned)
+	if (!isNaN(date.getTime())) return date
+	
+	// Try US format MM/DD/YYYY
+	const usMatch = cleaned.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+	if (usMatch) {
+		date = new Date(`${usMatch[3]}-${usMatch[1].padStart(2, '0')}-${usMatch[2].padStart(2, '0')}`)
+		if (!isNaN(date.getTime())) return date
+	}
+	
+	return null
 }
 
 /**
@@ -128,8 +159,29 @@ export function parseFlexibleDate(dateStr: string | null): Date | null {
  * - "$1M - $5M" => 1000000
  */
 export function parseMonetaryValue(text: string | null): number | null {
-	// TODO: Implement monetary parsing
-	throw new Error('Function not implemented')
+	if (!text) return null
+	
+	// Remove currency symbols and clean
+	const cleaned = text.replace(/[$,]/g, '').trim()
+	
+	// Handle K/M suffixes
+	if (cleaned.endsWith('K')) {
+		const num = parseFloat(cleaned.slice(0, -1))
+		return isNaN(num) ? null : num * 1000
+	}
+	if (cleaned.endsWith('M')) {
+		const num = parseFloat(cleaned.slice(0, -1))
+		return isNaN(num) ? null : num * 1000000
+	}
+	
+	// Handle ranges (take first value)
+	const rangeMatch = cleaned.match(/^([\d.]+)/)
+	if (rangeMatch) {
+		const num = parseFloat(rangeMatch[1])
+		return isNaN(num) ? null : num
+	}
+	
+	return null
 }
 
 /**
@@ -148,8 +200,13 @@ export function parseMonetaryValue(text: string | null): number | null {
  * - Return deduplicated array
  */
 export function deduplicateBy<T>(items: T[], keyFn: (item: T) => string): T[] {
-	// TODO: Implement deduplication
-	throw new Error('Function not implemented')
+	const seen = new Set<string>()
+	return items.filter(item => {
+		const key = keyFn(item)
+		if (seen.has(key)) return false
+		seen.add(key)
+		return true
+	})
 }
 
 /**
@@ -173,8 +230,20 @@ export async function retry<T>(
 	maxRetries: number = 3,
 	initialDelay: number = 1000
 ): Promise<T> {
-	// TODO: Implement retry logic
-	throw new Error('Function not implemented')
+	let lastError: Error
+	
+	for (let attempt = 0; attempt <= maxRetries; attempt++) {
+		try {
+			return await fn()
+		} catch (error) {
+			lastError = error as Error
+			if (attempt < maxRetries) {
+				await delay(initialDelay * Math.pow(2, attempt))
+			}
+		}
+	}
+	
+	throw lastError!
 }
 
 /**
@@ -194,7 +263,18 @@ export function log(
 	message: string,
 	level: 'info' | 'warn' | 'error' = 'info'
 ): void {
-	// TODO: Implement logging
-	throw new Error('Function not implemented')
+	const timestamp = new Date().toISOString()
+	const logMessage = `[${timestamp}] [${source}] [${level.toUpperCase()}] ${message}`
+	
+	switch (level) {
+		case 'warn':
+			console.warn(logMessage)
+			break
+		case 'error':
+			console.error(logMessage)
+			break
+		default:
+			console.log(logMessage)
+	}
 }
 

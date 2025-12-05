@@ -46,36 +46,22 @@ export abstract class ContractTransformer {
 
 	/**
 	 * Parse date string to ISO format
-	 * 
-	 * @param dateStr - Raw date string from source
-	 * @returns ISO formatted date string or null
-	 * 
-	 * TODO: Implement date parsing
-	 * - Handle various date formats
-	 * - Parse to Date object
-	 * - Return ISO string
-	 * - Return null for invalid dates
 	 */
 	protected parseDate(dateStr: string | null): string | null {
-		// TODO: Implement date parsing
-		throw new Error('Method not implemented')
+		if (!dateStr) return null
+		try {
+			const date = new Date(dateStr)
+			return isNaN(date.getTime()) ? null : date.toISOString()
+		} catch {
+			return null
+		}
 	}
 
 	/**
 	 * Generate unique contract ID
-	 * 
-	 * @param eventId - Event ID from source
-	 * @param source - Source name
-	 * @returns Unique contract ID
-	 * 
-	 * TODO: Implement ID generation
-	 * - Create deterministic ID from eventId and source
-	 * - Ensure uniqueness
-	 * - Use consistent format
 	 */
 	protected generateContractId(eventId: string, source: string): string {
-		// TODO: Implement ID generation
-		throw new Error('Method not implemented')
+		return `contract-${source}-${eventId}`.toLowerCase().replace(/[^a-z0-9-]/g, '-')
 	}
 }
 
@@ -109,19 +95,9 @@ export abstract class AgencyTransformer {
 
 	/**
 	 * Generate unique agency ID
-	 * 
-	 * @param agencyCode - Agency code from source
-	 * @param source - Source name
-	 * @returns Unique agency ID
-	 * 
-	 * TODO: Implement ID generation
-	 * - Create deterministic ID from agencyCode and source
-	 * - Handle missing agency codes
-	 * - Ensure uniqueness
 	 */
 	protected generateAgencyId(agencyCode: string, source: string): string {
-		// TODO: Implement ID generation
-		throw new Error('Method not implemented')
+		return `agency-${source}-${agencyCode}`.toLowerCase().replace(/[^a-z0-9-]/g, '-')
 	}
 }
 
@@ -157,35 +133,17 @@ export abstract class DocumentTransformer {
 
 	/**
 	 * Extract file extension from filename
-	 * 
-	 * @param fileName - File name with extension
-	 * @returns File extension (lowercase, without dot)
-	 * 
-	 * TODO: Implement extension extraction
-	 * - Parse file name
-	 * - Extract extension
-	 * - Return lowercase without dot
-	 * - Return 'unknown' if no extension
 	 */
 	protected extractFileExtension(fileName: string): string {
-		// TODO: Implement extension extraction
-		throw new Error('Method not implemented')
+		const match = fileName.match(/\.([^.]+)$/)
+		return match ? match[1].toLowerCase() : 'unknown'
 	}
 
 	/**
 	 * Generate unique document ID
-	 * 
-	 * @param documentUrl - Document URL or attachment ID
-	 * @param source - Source name
-	 * @returns Unique document ID
-	 * 
-	 * TODO: Implement ID generation
-	 * - Create deterministic ID from URL/attachmentId and source
-	 * - Ensure uniqueness
 	 */
 	protected generateDocumentId(documentUrl: string, source: string): string {
-		// TODO: Implement ID generation
-		throw new Error('Method not implemented')
+		return `document-${source}-${documentUrl}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').substring(0, 50)
 	}
 }
 
@@ -221,52 +179,26 @@ export abstract class PeopleTransformer {
 
 	/**
 	 * Normalize phone number
-	 * 
-	 * @param phone - Raw phone number string
-	 * @returns Normalized phone number
-	 * 
-	 * TODO: Implement phone normalization
-	 * - Remove formatting characters
-	 * - Standardize format
-	 * - Return null for invalid phones
 	 */
 	protected normalizePhone(phone: string | null): string | null {
-		// TODO: Implement phone normalization
-		throw new Error('Method not implemented')
+		if (!phone) return null
+		return phone.replace(/[^0-9]/g, '').replace(/^1/, '')
 	}
 
 	/**
 	 * Normalize email
-	 * 
-	 * @param email - Raw email string
-	 * @returns Normalized email (lowercase)
-	 * 
-	 * TODO: Implement email normalization
-	 * - Convert to lowercase
-	 * - Trim whitespace
-	 * - Validate format (basic check)
-	 * - Return null for invalid emails
 	 */
 	protected normalizeEmail(email: string | null): string | null {
-		// TODO: Implement email normalization
-		throw new Error('Method not implemented')
+		if (!email) return null
+		const trimmed = email.trim().toLowerCase()
+		return trimmed.includes('@') ? trimmed : null
 	}
 
 	/**
 	 * Generate unique person ID
-	 * 
-	 * @param email - Person's email
-	 * @param source - Source name
-	 * @returns Unique person ID
-	 * 
-	 * TODO: Implement ID generation
-	 * - Create deterministic ID from email and source
-	 * - Handle missing emails
-	 * - Ensure uniqueness
 	 */
-	protected generatePersonId(email: string, source: string): string {
-		// TODO: Implement ID generation
-		throw new Error('Method not implemented')
+	protected generatePersonId(identifier: string, source: string): string {
+		return `person-${source}-${identifier}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').substring(0, 50)
 	}
 }
 

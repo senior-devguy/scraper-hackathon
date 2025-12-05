@@ -39,8 +39,9 @@ export async function createSessionDirectory(
 	sessionName: string,
 	stage: 'source' | 'intake'
 ): Promise<string> {
-	// TODO: Implement directory creation
-	throw new Error('Function not implemented')
+	const dirPath = path.join('./output', stage, sessionName)
+	await fs.mkdir(dirPath, { recursive: true })
+	return dirPath
 }
 
 /**
@@ -62,8 +63,9 @@ export async function saveBatchToFile(
 	sessionDir: string,
 	batchNum: number
 ): Promise<void> {
-	// TODO: Implement batch saving
-	throw new Error('Function not implemented')
+	const fileName = `batch_${batchNum}.json`
+	const filePath = path.join(sessionDir, fileName)
+	await fs.writeFile(filePath, JSON.stringify(data, null, 2))
 }
 
 /**
@@ -80,8 +82,10 @@ export async function saveBatchToFile(
  * - Log success message
  */
 export async function saveIntakeToFile(data: any, fileName: string): Promise<void> {
-	// TODO: Implement intake saving
-	throw new Error('Function not implemented')
+	const intakeDir = './output/intake'
+	await fs.mkdir(intakeDir, { recursive: true })
+	const filePath = path.join(intakeDir, `${fileName}.json`)
+	await fs.writeFile(filePath, JSON.stringify(data, null, 2))
 }
 
 /**
@@ -103,9 +107,24 @@ export async function downloadFileLocally(
 	url: string,
 	contractId: string,
 	fileName: string
-): Promise<string> {
-	// TODO: Implement file download
-	throw new Error('Function not implemented')
+): Promise<{ localPath: string; fileSize: number }> {
+	const docDir = path.join('./output/documents', contractId)
+	await fs.mkdir(docDir, { recursive: true })
+	const filePath = path.join(docDir, fileName)
+	
+	try {
+		const response = await fetch(url)
+		if (!response.ok) throw new Error(`HTTP ${response.status}`)
+		const buffer = await response.arrayBuffer()
+		await fs.writeFile(filePath, Buffer.from(buffer))
+		
+		return {
+			localPath: filePath,
+			fileSize: buffer.byteLength
+		}
+	} catch (error) {
+		throw error
+	}
 }
 
 /**
@@ -122,15 +141,26 @@ export async function downloadFileLocally(
  * - Handle read/parse errors
  */
 export async function readBatchFiles(sessionDir: string): Promise<any[]> {
-	// TODO: Implement batch reading
-	throw new Error('Function not implemented')
+	const files = await fs.readdir(sessionDir)
+	const batchFiles = files.filter(f => f.startsWith('batch_') && f.endsWith('.json'))
+	
+	const batches = []
+	for (const file of batchFiles) {
+		try {
+			const content = await fs.readFile(path.join(sessionDir, file), 'utf-8')
+			batches.push(JSON.parse(content))
+		} catch (error) {
+			console.error(`Failed to read ${file}:`, error)
+		}
+	}
+	return batches
 }
 
 /**
  * Generate unique session name
  * 
  * @param source - Source name (e.g., 'yourstate')
- * @param dateRange - Date range being scraped
+ * @param filter - Date range or Page Range being scraped 
  * @returns Unique session name
  * 
  * Format: session_SOURCE_YYYY-MM-DD_TIMESTAMP
@@ -143,10 +173,10 @@ export async function readBatchFiles(sessionDir: string): Promise<any[]> {
  */
 export function generateSessionName(
 	source: string,
-	dateRange: { from: Date; to: Date }
+	filter: string
 ): string {
-	// TODO: Implement session name generation
-	throw new Error('Function not implemented')
+	const timestamp = Date.now()
+	return `session_${source}_${filter}_${timestamp}`
 }
 
 /**
@@ -161,7 +191,11 @@ export function generateSessionName(
  * - Handle errors gracefully
  */
 export async function directoryExists(dirPath: string): Promise<boolean> {
-	// TODO: Implement directory existence check
-	throw new Error('Function not implemented')
+	try {
+		await fs.access(dirPath)
+		return true
+	} catch {
+		return false
+	}
 }
 
