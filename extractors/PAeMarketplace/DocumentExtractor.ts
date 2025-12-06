@@ -59,4 +59,43 @@ export class DocumentExtractor extends BaseExtractor<DocumentExtractData[]> {
 			return []
 		}
 	}
+
+	public async extractAward(page: Page): Promise<DocumentExtractData[]> {
+		const documents: DocumentExtractData[] = []
+
+		try {
+			// Look for document links in various common locations
+			const documentSelectors = [
+				{
+					title: 'Related Docs',
+					selector: '#ctl00_MainBody_lbl_File a',
+				},
+			]
+
+			for (const {title, selector} of documentSelectors) {
+				const links = await page.locator(selector).all()
+				
+				for (const link of links) {
+					const href = await this.extractAttribute(link, 'href') 
+					
+					if (href) {
+						// Convert relative URLs to absolute
+						const downloadUrl = href.startsWith('http') ? href : `${PAeMarketplaceScraper.BASE_URL}/${href}`
+						
+						documents.push({
+							id: generateId(title),
+							title,
+							downloadUrl,
+							fileName: getFilenameFromUrl(downloadUrl) ?? title,
+						})
+					}
+				}
+			}
+
+			return documents
+		} catch (error) {
+			log(this.LOG_SOURCE, `Error extract: ${error}`, 'error')
+			return []
+		}
+	}
 }

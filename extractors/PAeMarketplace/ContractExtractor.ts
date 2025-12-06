@@ -31,9 +31,12 @@ export class ContractExtractor extends BaseExtractor<SOURCE_CONTRACT> {
 		if (tabs != 'N/A') {
 			tabs = 'Yes'
 		}
-		let awards = await this.extractText(page.locator('#ctl00_MainBody_lbl_Awards').first());
-		if (awards != 'N/A') {
-			awards = 'Yes'
+		let awardsLink = await this.extractText(page.locator('#ctl00_MainBody_lbl_Awards').first());
+		if (awardsLink != 'N/A') {
+			awardsLink = await this.extractAttribute(page.locator('#ctl00_MainBody_lbl_Awards a').first(), 'href');
+			if (awardsLink == null) {
+				awardsLink = 'N/A'
+			}
 		}
 
 		// Extract status
@@ -67,7 +70,7 @@ export class ContractExtractor extends BaseExtractor<SOURCE_CONTRACT> {
 			pcard,
 			tabs,
 			solicitations,
-			awards,
+			awardsLink,
 			mscc,
 		}
 	}

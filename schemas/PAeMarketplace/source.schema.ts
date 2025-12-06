@@ -32,6 +32,17 @@ export const SOURCE_DOCUMENT = z.object({
     fileSize: z.number().nullable().optional(),
 })
 
+export const SOURCE_AWARD = z.object({
+    contractNumber: z.string().nullable().optional(),
+    bidNumber: z.string().nullable().optional(),
+    description: z.string().nullable().optional(),
+    agency: z.string().nullable().optional(),
+    awardedTo: z.string().nullable().optional(),
+    dollarAmount: z.string().nullable().optional(),
+    postedDate: z.string().nullable().optional(),
+    sourceUrl: z.string().nullable().optional(),
+})
+
 /**
  * SOURCE_CONTRACT
  *
@@ -57,7 +68,8 @@ export const SOURCE_CONTRACT = z.object({
     pcard: z.string().nullable().optional(),
     tabs: z.string().nullable().optional(),
     solicitations: z.string().nullable().optional(),
-    awards: z.string().nullable().optional(),
+    awardsLink: z.string().nullable().optional(),
+    awards: SOURCE_AWARD.nullable().optional(),
     mscc: z.boolean().nullable().optional(),
 })
 
@@ -113,6 +125,7 @@ export const SOURCE_TO_INTAKE = z.object({
 
 export type SOURCE_LISTING = z.infer<typeof SOURCE_LISTING>
 export type SOURCE_DOCUMENT = z.infer<typeof SOURCE_DOCUMENT>
+export type SOURCE_AWARD = z.infer<typeof SOURCE_AWARD>
 export type SOURCE_CONTRACT = z.infer<typeof SOURCE_CONTRACT>
 export type SOURCE_OPPORTUNITY = z.infer<typeof SOURCE_OPPORTUNITY>
 export type SOURCE_TO_INTAKE = z.infer<typeof SOURCE_TO_INTAKE>

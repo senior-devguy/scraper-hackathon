@@ -8,8 +8,9 @@ import {
 } from '../utils/storage'
 import { log, delay } from '../utils/helpers'
 import { ContractExtractor } from '../extractors/PAeMarketplace/ContractExtractor'
+import { AwardExtractor } from '../extractors/PAeMarketplace/AwardExtractor'
 import { DocumentExtractor, DocumentExtractData } from '../extractors/PAeMarketplace/DocumentExtractor'
-import { SOURCE_CONTRACT, SOURCE_DOCUMENT, SOURCE_LISTING, SOURCE_OPPORTUNITY, SOURCE_TO_INTAKE } from '../schemas/PAeMarketplace/source.schema'
+import { SOURCE_AWARD, SOURCE_CONTRACT, SOURCE_DOCUMENT, SOURCE_LISTING, SOURCE_OPPORTUNITY, SOURCE_TO_INTAKE } from '../schemas/PAeMarketplace/source.schema'
 
 /**
  * PAeMarketplaceScraper
@@ -27,6 +28,7 @@ export class PAeMarketplaceScraper extends BaseScraper {
 	constructor(
 		config: ScraperConfig,
 		private contractExtractor: ContractExtractor,
+		private awardExtractor: AwardExtractor,
 		private documentExtractor: DocumentExtractor
 	) {
 		super(config)
@@ -34,10 +36,12 @@ export class PAeMarketplaceScraper extends BaseScraper {
 	}
 	
 	private async goToPage(page: Page, num: number): Promise<void> {
-		await page.evaluate((pageNum) => {
-			(window as any).__doPostBack('ctl00$MainBody$gvDGSBidContracts', `Page$${pageNum}`);
-		}, num);
+		const pageLink = page.locator(`a[href="javascript:__doPostBack('ctl00$MainBody$gvDGSBidContracts','Page$${num}')"]`);
+		const count = await pageLink.count();
+		if (count === 0) return;
+		await pageLink.click()
 	}
+
 	/**
 	 * Navigate to a specific page using __doPostBack
 	 */
@@ -50,7 +54,7 @@ export class PAeMarketplaceScraper extends BaseScraper {
 				this.pager_start = this.pager_end - 1;
 				this.pager_end = this.pager_end + 10;
 			}
-			
+
 			await this.goToPage(page, pageNumber);
 			await delay(5000);
 			this.pager_selected = pageNumber;
@@ -83,6 +87,8 @@ export class PAeMarketplaceScraper extends BaseScraper {
 				throw Error('"Display" selector not found');
 			}
 			await displaySel.selectOption(`${this.config.batchSize ?? ''}`);
+
+			await page.click('#ctl00_MainBody_rdoBoth'); // select both
 
 			await page.click('#ctl00_MainBody_btnSearch');
 
@@ -141,7 +147,7 @@ export class PAeMarketplaceScraper extends BaseScraper {
 		const page = await browser.newPage()
 		
 		try {
-			log(this.constructor.name, `Processing opportunity: ${listing.title}`, 'info')
+			log(this.LOG_SOURCE, `Processing opportunity: ${listing.title}`, 'info')
 			
 			// Navigate to detail page
 			await page.goto(listing.url!, { waitUntil: 'networkidle' })
@@ -178,7 +184,17 @@ export class PAeMarketplaceScraper extends BaseScraper {
 
 					delay(3000);
 				} catch (error) {
-					log(this.LOG_SOURCE, `Failed to download document ${doc.fileName}: ${error}`, 'warn')
+					// log(this.LOG_SOURCE, `Failed to download document ${doc.fileName}: ${error}`, 'warn')
+				}
+			}
+
+			// check if it was awarded.
+			if (contract.awardsLink != 'N/A') {
+				// Extract opportunity data
+				const awardResult = await this.processAwards(browser, contract);
+				if (awardResult) {
+					contract.awards = awardResult.awardData;
+					documents.push(...awardResult.documents);
 				}
 			}
 			
@@ -194,6 +210,89 @@ export class PAeMarketplaceScraper extends BaseScraper {
 			
 		} catch (error) {
 			log(this.LOG_SOURCE, `Error processing opportunity ${listing.title}: ${error}`, 'error')
+			return null
+		} finally {
+			await page.close()
+		}
+	}
+
+	private async processAwards( browser: Browser, contract: SOURCE_CONTRACT ): Promise<{awardData: SOURCE_AWARD, documents: SOURCE_DOCUMENT[]} | null> {
+		const page = await browser.newPage()
+		
+		try {
+			log(this.LOG_SOURCE, `Processing award: ${contract.awardsLink}`, 'info')
+			
+			// Navigate to detail page
+			await page.goto(`${PAeMarketplaceScraper.BASE_URL}/${contract.awardsLink}`, { waitUntil: 'networkidle' })
+			
+			// Wait for the main content to load
+			await page.waitForSelector('#aspnetForm', { timeout: 10000 })
+
+			// search for open 
+			let awardRecordId = null;
+			await page.click('#ctl00_MainBody_rdoOpen'); // select open
+			await page.click('#ctl00_MainBody_btnSearch');
+			delay(5000);
+			awardRecordId = await this.awardExtractor.extractAwardsDetailsLink(page);
+			
+			if (!awardRecordId) {
+				await page.click('#ctl00_MainBody_rdoArch'); // select archive
+				await page.click('#ctl00_MainBody_btnSearch');
+				delay(5000);
+				awardRecordId = await this.awardExtractor.extractAwardsDetailsLink(page);
+			}
+
+			if (!awardRecordId) {
+				throw Error(`No award found for contract ${contract.id}`);
+			}
+
+			const sourceUrl = `${PAeMarketplaceScraper.BASE_URL}/BidAwardDetails.aspx?RecordNo=${awardRecordId}`;
+			// Navigate to award detail page
+			await page.goto(sourceUrl, { waitUntil: 'networkidle' })
+			// Wait for the main content to load
+			await page.waitForSelector('#aspnetForm', { timeout: 10000 })
+			
+			// Extract awards data
+			const awardData: SOURCE_AWARD = await this.awardExtractor.extract(page)
+			awardData.sourceUrl = sourceUrl;
+
+			// Extract documents
+			const documentsData: DocumentExtractData[] = await this.documentExtractor.extractAward(page)
+			
+			// Download documents
+			const documents: SOURCE_DOCUMENT[] = []
+			for (const doc of documentsData) {
+				try {
+					const {localPath, fileSize} = await downloadFileLocally(
+						doc.downloadUrl,
+						contract.id,
+						doc.fileName
+					)
+
+					documents.push({
+						id: doc.id,
+						contractId: contract.id,
+						title: doc.title,
+						fileName: doc.fileName,
+						downloadUrl: doc.downloadUrl,
+						localPath: localPath,
+						fileType: doc.fileName.split('.').pop()?.toLowerCase() || '',
+						fileSize
+					})
+
+					delay(3000);
+				} catch (error) {
+					// log(this.LOG_SOURCE, `Failed to download document ${doc.fileName}: ${error}`, 'warn')
+				}
+			}
+
+			return {
+				awardData,
+				documents
+			};
+			
+		} catch (error) {
+			log(this.LOG_SOURCE, `Error processing award ${contract.awardsLink}: ${error}`, 'error')
 			return null
 		} finally {
 			await page.close()

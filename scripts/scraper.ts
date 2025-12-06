@@ -24,6 +24,7 @@ import { log } from '../utils/helpers'
 import { PAeMarketplaceScraper } from '../scrapers/PAeMarketplaceScraper'
 import { ContractExtractor } from '../extractors/PAeMarketplace/ContractExtractor'
 import { DocumentExtractor } from '../extractors/PAeMarketplace/DocumentExtractor'
+import { AwardExtractor } from '../extractors/PAeMarketplace/AwardExtractor'
 
 /**
  * Main execution
@@ -45,10 +46,12 @@ async function main() {
 
 				// Create ContractExtractor and DocumentExtractor instances
 				const contractExtractor = new ContractExtractor();
+				// Create ContractExtractor and DocumentExtractor instances
+				const awardExtractor = new AwardExtractor();
 				// Create DocumentExtractor instance
 				const documentExtractor = new DocumentExtractor();
 
-				const scraper = new PAeMarketplaceScraper(PaConfig, contractExtractor, documentExtractor);
+				const scraper = new PAeMarketplaceScraper(PaConfig, contractExtractor, awardExtractor, documentExtractor);
 				  
 				// Create and run scraper
 				const result = await scraper.run()
