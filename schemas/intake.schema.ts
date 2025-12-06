@@ -41,6 +41,23 @@ export const INTAKE_CONTRACT = z.object({
 })
 
 /**
+ * INTAKE_AWARD
+ * 
+ * Normalized Award data.
+ */
+export const INTAKE_AWARD = z.object({
+	id: z.string(),
+	contractId: z.string(),
+	source: z.string(),
+	agencyId: z.string().nullable().optional(),
+	awardedToId: z.string().nullable().optional(),
+	description: z.string().nullable().optional(),
+	amount: z.number().nullable().optional(),
+	updatedAt: z.string().nullable().optional(),
+	sourceUrl: z.string()
+})
+
+/**
  * INTAKE_AGENCY
  * 
  * Normalized agency data.
@@ -91,6 +108,7 @@ export const INTAKE_PEOPLE = z.object({
  */
 export const INTAKE_OUTPUT = z.object({
 	contracts: z.array(INTAKE_CONTRACT),
+	awards: z.array(INTAKE_AWARD),
 	agencies: z.array(INTAKE_AGENCY),
 	documents: z.array(INTAKE_DOCUMENT),
 	people: z.array(INTAKE_PEOPLE),
@@ -109,6 +127,7 @@ export const INTAKE_OUTPUT = z.object({
 // ============================================================================
 
 export type INTAKE_CONTRACT = z.infer<typeof INTAKE_CONTRACT>
+export type INTAKE_AWARD = z.infer<typeof INTAKE_AWARD>
 export type INTAKE_AGENCY = z.infer<typeof INTAKE_AGENCY>
 export type INTAKE_DOCUMENT = z.infer<typeof INTAKE_DOCUMENT>
 export type INTAKE_PEOPLE = z.infer<typeof INTAKE_PEOPLE>

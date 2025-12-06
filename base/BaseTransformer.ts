@@ -202,3 +202,16 @@ export abstract class PeopleTransformer {
 	}
 }
 
+export abstract class AwardTransformer {
+	/**
+	 * Transform raw contact data to award intake format
+	 * 
+	 * @param opportunity - Raw opportunity with contact info
+	 * @param contractId - Associated contract ID
+	 * @param source - Source name
+	 * @returns Normalized people data matching INTAKE_PEOPLE schema or null
+	 * 
+	 * TODO: Implement transformation logic
+	 */
+	public abstract transform(opportunity: any, contractId: string, source: string): any
+}

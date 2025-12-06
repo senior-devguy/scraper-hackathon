@@ -28,7 +28,7 @@ export class PennsylvaniaContractTransformer extends ContractTransformer {
 	private normalizeStatus(contract: SOURCE_CONTRACT): string {
 		const endDate = parseFlexibleDate(contract.endDate);
 		if (endDate != null && (new Date(endDate) < new Date())) return 'closed'
-		if (contract.awards != "N/A") return 'awarded'
+		if (contract.awards != null) return 'awarded'
 		return 'open';
 	}
 }

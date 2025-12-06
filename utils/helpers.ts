@@ -43,6 +43,10 @@ export function generatePersonId(name: string, source: string): string {
 	return generateId(name, `person-${source}`);
 }
 
+export function generateAwardId(name: string, source: string): string {
+	return generateId(name, `award-${source}`);
+}
+
 /**
  * Delay execution for specified milliseconds
  * 

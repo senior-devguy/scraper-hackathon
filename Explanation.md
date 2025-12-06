@@ -10,6 +10,15 @@ Build a complete scraping solution that:
 3. **Transforms** raw data into a normalized format
 4. **Follows** industry best practices and design patterns
 
+## HOW TO RUN
+1. Scrapper
+
+npm run scraper source=PA start-page=41 end-page=42
+
+2. Intaker
+
+npm run intake ./output/source/session_pennsylvania_page41-page42_1765011524408
+
 ## 📋 Requirements
 
 ### Functional Requirements

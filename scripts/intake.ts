@@ -21,13 +21,14 @@
 import { readBatchFiles, saveIntakeToFile } from '../utils/storage'
 import { deduplicateBy, log } from '../utils/helpers'
 import { SOURCE_DOCUMENT, SOURCE_OPPORTUNITY, SOURCE_TO_INTAKE } from '../schemas/PAeMarketplace/source.schema'
-import { INTAKE_AGENCY, INTAKE_CONTRACT, INTAKE_DOCUMENT, INTAKE_OUTPUT, INTAKE_PEOPLE } from '../schemas/intake.schema'
+import { INTAKE_AGENCY, INTAKE_AWARD, INTAKE_CONTRACT, INTAKE_DOCUMENT, INTAKE_OUTPUT, INTAKE_PEOPLE } from '../schemas/intake.schema'
 import { PennsylvaniaAgencyTransformer } from '../transformers/PAeMarketplace/AgencyTransformer'
 import { PennsylvaniaContractTransformer } from '../transformers/PAeMarketplace/ContractTransformer'
 import { PennsylvaniaDocumentTransformer } from '../transformers/PAeMarketplace/DocumentTransformer'
 import { PennsylvaniaPeopleTransformer } from '../transformers/PAeMarketplace/PeopleTransformer'
 import { PennsylvaniaSupplierTransformer } from '../transformers/PAeMarketplace/SupplierTransformer'
-import { ContractTransformer, PeopleTransformer, DocumentTransformer, AgencyTransformer } from '../base/BaseTransformer'
+import { ContractTransformer, PeopleTransformer, DocumentTransformer, AgencyTransformer, AwardTransformer } from '../base/BaseTransformer'
+import { PennsylvaniaAwardTransformer } from '../transformers/PAeMarketplace/AwardTransformer'
 
 /**
  * Process intake
@@ -56,6 +57,7 @@ async function processIntake(sessionDir: string): Promise<void> {
 		// Initialize output collections
 		const source = batches[0]?.metadata?.source || 'unknown'
 		let contractTransformer: ContractTransformer;
+		let awardTransformer: AwardTransformer;
 		let agencyTransformer: AgencyTransformer;
 		let supplierTransformer: AgencyTransformer;
 		let documentTransformer: DocumentTransformer;
@@ -64,6 +66,7 @@ async function processIntake(sessionDir: string): Promise<void> {
 		switch (source) {
 			case 'pennsylvania':
 				contractTransformer = new PennsylvaniaContractTransformer()
+				awardTransformer = new PennsylvaniaAwardTransformer()
 				agencyTransformer = new PennsylvaniaAgencyTransformer()
 				supplierTransformer = new PennsylvaniaSupplierTransformer()
 				documentTransformer = new PennsylvaniaDocumentTransformer()
@@ -74,6 +77,7 @@ async function processIntake(sessionDir: string): Promise<void> {
 		}
 		
 		const contracts: INTAKE_CONTRACT[] = []
+		const awards: INTAKE_AWARD[] = []
 		const agencies: INTAKE_AGENCY[] = []
 		const documents: INTAKE_DOCUMENT[] = []
 		const people: INTAKE_PEOPLE[] = []
@@ -86,11 +90,15 @@ async function processIntake(sessionDir: string): Promise<void> {
 				contract.scrapedAt = batch.metadata.scrapedAt
 				contracts.push(contract)
 
+				// Transform award
+				const award = awardTransformer.transform(item.contract, contract.id, source)
+				if (award) awards.push(award)
+
 				// Transform agency
 				const agency = agencyTransformer.transform(item.contract, source)
 				if (agency) agencies.push(agency)
 
-				// Transform agency
+				// Transform supplier
 				const supplier = supplierTransformer.transform(item.contract, source)
 				if (supplier) agencies.push(supplier)
 
@@ -115,6 +123,7 @@ async function processIntake(sessionDir: string): Promise<void> {
 		// Create intake output
 		const output = {
 			contracts: contracts,
+			awards: awards,
 			agencies: uniqueAgencies,
 			documents: documents,
 			people: uniquePeople,
