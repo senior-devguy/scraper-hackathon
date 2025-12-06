@@ -20,7 +20,10 @@ export class PAeMarketplaceScraper extends BaseScraper {
 	public static readonly BASE_URL = 'https://www.emarketplace.state.pa.us'
 	private static readonly BID_CONTRACTS_URL: string = `${this.BASE_URL}/BidContracts.aspx`
 	private static readonly BID_CONTRACT_DETAILS_URL = `${this.BASE_URL}/BidContractDetails.aspx?ContractNo=`;
-	
+	private pager_start = 1;
+	private pager_end = 11;
+	private pager_selected = 1;
+
 	constructor(
 		config: ScraperConfig,
 		private contractExtractor: ContractExtractor,
@@ -30,6 +33,33 @@ export class PAeMarketplaceScraper extends BaseScraper {
 		this.LOG_SOURCE = this.constructor.name;
 	}
 	
+	private async goToPage(page: Page, num: number): Promise<void> {
+		await page.evaluate((pageNum) => {
+			(window as any).__doPostBack('ctl00$MainBody$gvDGSBidContracts', `Page$${pageNum}`);
+		}, num);
+	}
+	/**
+	 * Navigate to a specific page using __doPostBack
+	 */
+	private async navigateToPage(page: Page, pageNumber: number): Promise<void> {
+		try {
+			if (this.pager_selected == pageNumber) return;
+			while(pageNumber > this.pager_end) {
+				await this.goToPage(page, this.pager_end);
+				await delay(5000);
+				this.pager_start = this.pager_end - 1;
+				this.pager_end = this.pager_end + 10;
+			}
+			
+			await this.goToPage(page, pageNumber);
+			await delay(5000);
+			this.pager_selected = pageNumber;
+
+		} catch (error) {
+			throw Error(`Error navigating to page ${pageNumber}: ${error}`);
+		}
+	}
+
 	/**
 	 * Initiate listing page
 	 */
@@ -73,6 +103,9 @@ export class PAeMarketplaceScraper extends BaseScraper {
 		pageSize: number
 	): Promise<SOURCE_LISTING[]> {
 		try {
+			// Navigate to the requested page if not the first page
+			await this.navigateToPage(page, pageNumber);
+
 			// Look for opportunity links in the page
 			const links = await page.locator('a[title="Contract Details"]').all()
 			
