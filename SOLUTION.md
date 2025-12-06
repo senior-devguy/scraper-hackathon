@@ -18,17 +18,27 @@ I built a complete scraping solution that:
 - I wrote clear comment.
 
 
-## 🚀 Getting Started
+## 🚀 Analytics of Website for scrapping
 
-### Step 1: Understand the Target Website
-- Analyze the website structure
-- Identify listing pages and detail pages
-- Check if they use AJAX/API calls
-- Note pagination mechanism
-- Identify document download patterns
+### Step 1: the Main Page for listing of contracts (https://www.emarketplace.state.pa.us/BidContracts.aspx)
+- We need to choose "Both" for open/archived status, and choose "All Items" for search by and need to click the "Search" button to fetch the list of contracts.
+- This page does not support any filter for date
+- This page has a pagination at bottom, we need to choose correct page to scrape from command line arguements
 
-### Step 2: Define Your Schemas
+### Step 2: the Detail Page for a contract (https://www.emarketplace.state.pa.us/BidContractDetails.aspx?ContractNo=4400009000)
+- We need to open the detail page by contract number (https://www.emarketplace.state.pa.us/BidContractDetails.aspx?ContractNo=4400009000)
+- All data can be extracted from unique dom id.
+- There is a Awards button for redirecting to awards list page for this contract.
+- There are direct download urls for Documents
 
+### Step 3: the Awards list Page for a contract (https://www.emarketplace.state.pa.us/BidAward.aspx?SID=4400018174&From=Contracts)
+- We need to open the awards list page for a contract from this url (https://www.emarketplace.state.pa.us/BidAward.aspx?SID=4400018174&From=Contracts)
+- We need to choose `open` or `archived` radio button according to the contract status and click the `Search` button
+- For each row of awards table, it has a hidden value for the `RecordNo` of the Award. (This `RecordNo` is used for opening the Award detail page)
+
+### Step 3: the Awards Detail Page for a contract (https://www.emarketplace.state.pa.us/BidAwardDetails.aspx?RecordNo=15076)
+- All data can be extracted from unique dom id
+- There are direct download urls for Documents
 
 
 ## HOW TO RUN
@@ -40,10 +50,10 @@ Scrapper has several arguments.
 * end-page: not required, the end page number to scrape
 
 example: 
-- npm run scraper source=PA start-page=1 end-page=5
+- npm run scraper source=PA start-page=1 end-page=5 (because the website does not support date filter, so i handled arguments for pagination)
 - npm run scraper source=PA start-page=41 end-page=42  ( * use this for testing awards because these pages contains the awards data )
 
-because it support the pagination by the arguments, we can this scrappers in parallel without re-scrapping the same data.
+because it supports pagination by the arguments, we can run this scrappers in parallel without re-scrapping the same data.
 
 2. Intaker
 Intaker has one argument, which is the path to the scrapping source json files.
@@ -89,16 +99,3 @@ hackathon/
 ├── README.md                    # This file
 └── ARCHITECTURE.md              # Architecture guide
 ```
-    
-
-Impress us with:
-- 📸 **Screenshots**: Add screenshots of the target website with annotations
-- 📝 **Documentation**: Add a SOLUTION.md explaining your approach
-- 🧪 **Testing**: Add unit tests for transformers
-- 🔄 **Retry Logic**: Implement exponential backoff for failed requests
-- 🎨 **Pretty Output**: Format console output with colors and progress bars
-- 🔍 **Data Validation**: Add extra validation beyond Zod schemas
-- 📊 **Statistics**: Log scraping statistics (success rate, avg time, etc.)
-- 🛡️ **Robustness**: Handle edge cases (missing fields, malformed HTML, etc.)
-
-
